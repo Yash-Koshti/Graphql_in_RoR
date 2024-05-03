@@ -21,7 +21,7 @@ end
 # takes the result of graphql and digs into
 # 'data', query_name (if defined), and then parameters
 def data_dig(*nodes)
-  dig_through(subject, *nodes)
+  dig_through(result, *nodes)
 end
 
 def data_ids
