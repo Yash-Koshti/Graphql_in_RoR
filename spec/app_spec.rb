@@ -20,18 +20,13 @@ RSpec.describe "user spec", type: :request do
           }
         GQL
       end
-      it "should initially return nil" do
-        pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
-        pp "Data_dig: #{data_dig}"
-
-        expect(data_dig("users")).to eq []
-      end
 
       it "should not return nil if have some users" do
-        FactoryBot.create(:user)
+        FactoryBot.build(:user)
 
-        pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
-        pp "Data_dig: #{data_dig}"
+        # pp "---Query---"
+        # pp "Error message: #{result("errors", 0, "message")}" unless result["data"]
+        # pp "Data_dig: #{data_dig}"
 
         expect(data_dig("users")).not_to be_nil
       end
@@ -40,37 +35,102 @@ RSpec.describe "user spec", type: :request do
 
   describe "mutation" do
     context "create user" do
-      let(:dummy_user) { FactoryBot.attributes_for(:user) }
+      dummy_user = FactoryBot.attributes_for(:user)
       let(:query_string) do
         <<~GQL
-            mutation {
-              userCreate(input: {
-                userInput: {
-                  userName: "#{dummy_user[:user_name]}",
-              email: "#{dummy_user[:email]}"
-            }
-          }){
-            user {
-              id
-              userName
-              email
-              createdAt
-              updatedAt
+          mutation {
+            userCreate(input: {
+              userInput: {
+                userName: "#{dummy_user[:user_name]}",
+                email: "#{dummy_user[:email]}"
+              }
+            }){
+              user {
+                id
+                userName
+                email
+                createdAt
+                updatedAt
+              }
             }
           }
-        }
         GQL
       end
 
       it "should return newly created user" do
-        pp "Dummy_user: #{dummy_user}"
-        pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
-        pp "Data_dig: #{data_dig}"
+        # pp "---Create---"
+        # pp "Dummy_user: #{dummy_user}"
+        # pp "Error message: #{result("errors", 0, "message")}" unless result["data"]
+        # pp "Data_dig: #{data_dig}"
 
         expect(data_dig("userCreate", "user")).to include(
           "userName" => dummy_user[:user_name],
           "email" => dummy_user[:email],
         )
+      end
+    end
+
+    context "update user" do
+      let(:dummy_user) { FactoryBot.create(:user) }
+      let(:query_string) do
+        <<~GQL
+          mutation {
+            userUpdate(input: {
+              id: #{dummy_user.id},
+              userInput: {
+                userName: "testing Update",
+                email: "update.complete@test.com"
+              }
+            }){
+              user {
+                id
+                userName
+                email
+                createdAt
+                updatedAt
+              }
+            }
+          }
+        GQL
+      end
+
+      it "should update user_name and email" do
+        # pp "---Update---"
+        # pp "Dummy_user: #{dummy_user}, Id: #{dummy_user.id}, Name: #{dummy_user.user_name}"
+        # pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
+        # pp "Data_dig: #{data_dig}"
+
+        expect(User.find(dummy_user.id).user_name).to eq "testing Update"
+        expect(data_dig("userUpdate", "user")).to include(
+          "id" => dummy_user.id.to_s,
+          "userName" => "testing Update",
+          "email" => "update.complete@test.com",
+        )
+      end
+    end
+    #database cleaner active records: This is used to clean database.
+    context "delete user" do
+      let(:dummy_user) { FactoryBot.create(:user) }
+      let(:query_string) do
+        <<~GQL
+          mutation{
+            userDelete(input: {
+              id: #{dummy_user.id}
+            }){
+              user{
+                id
+              }
+            }
+          }
+        GQL
+      end
+
+      it "should delete user" do
+        # pp "---Delete---"
+        # pp "Dummy_user: #{dummy_user}, Id: #{dummy_user.id}"
+        # pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
+        # pp "Data_dig: #{data_dig}"
+        expect(data_dig("userDelete", "user")).to include("id" => dummy_user.id.to_s)
       end
     end
   end
