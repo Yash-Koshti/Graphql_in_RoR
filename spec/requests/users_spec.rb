@@ -1,14 +1,13 @@
-# frozen_string_literal: true
 require "rails_helper"
 require "graphql_helper"
 
-RSpec.describe "user spec", type: :request do
+RSpec.describe "Users", type: :request do
   let(:context) { {} }
   let(:variables) { {} }
   let(:result) { execute_graphql_test }
 
   describe "query" do
-    context "fetch all users" do
+    context "users" do
       let(:query_string) do
         <<~GQL
           query {
@@ -34,8 +33,8 @@ RSpec.describe "user spec", type: :request do
   end
 
   describe "mutation" do
-    context "create user" do
-      dummy_user = FactoryBot.attributes_for(:user)
+    context "userCreate" do
+      let(:dummy_user) { FactoryBot.attributes_for(:user) }
       let(:query_string) do
         <<~GQL
           mutation {
@@ -70,7 +69,7 @@ RSpec.describe "user spec", type: :request do
       end
     end
 
-    context "update user" do
+    context "userUpdate" do
       let(:dummy_user) { FactoryBot.create(:user) }
       let(:query_string) do
         <<~GQL
@@ -86,8 +85,6 @@ RSpec.describe "user spec", type: :request do
                 id
                 userName
                 email
-                createdAt
-                updatedAt
               }
             }
           }
@@ -95,21 +92,24 @@ RSpec.describe "user spec", type: :request do
       end
 
       it "should update user_name and email" do
+        user_returned_from_query = data_dig("userUpdate", "user")
+        user_found_in_db = User.find(dummy_user.id)
+
         # pp "---Update---"
         # pp "Dummy_user: #{dummy_user}, Id: #{dummy_user.id}, Name: #{dummy_user.user_name}"
         # pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
         # pp "Data_dig: #{data_dig}"
 
-        expect(User.find(dummy_user.id).user_name).to eq "testing Update"
-        expect(data_dig("userUpdate", "user")).to include(
+        expect(user_returned_from_query).to include(
           "id" => dummy_user.id.to_s,
           "userName" => "testing Update",
           "email" => "update.complete@test.com",
         )
+        expect(user_found_in_db.user_name).to eq "testing Update"
       end
     end
     #database cleaner active records: This is used to clean database.
-    context "delete user" do
+    context "userDelete" do
       let(:dummy_user) { FactoryBot.create(:user) }
       let(:query_string) do
         <<~GQL
@@ -130,7 +130,8 @@ RSpec.describe "user spec", type: :request do
         # pp "Dummy_user: #{dummy_user}, Id: #{dummy_user.id}"
         # pp "Error message: #{result["errors"][0]["message"]}" unless result["data"]
         # pp "Data_dig: #{data_dig}"
-        expect(data_dig("userDelete", "user")).to include("id" => dummy_user.id.to_s)
+        expect(data_dig("userDelete", "user", "id")).to eq dummy_user.id.to_s
+        expect { User.find(dummy_user.id) }.to raise_error(ActiveRecord::RecordNotFound)
       end
     end
   end
